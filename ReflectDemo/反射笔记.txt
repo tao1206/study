@@ -1,0 +1,397 @@
+反射学习笔记
+    
+	1.理解Class类
+	2.理解Java中的反射机制
+	3.学会使用ClassLoader进行类加载
+	4.理解反射的机制
+	5.掌握Constructor、Method、Field类的用法
+	6.理解并掌握动态代理
+	
+	
+	1.理解Class类
+	        对象找镜子后可以得到：某个类的数据成员名、方法和构造器、某个类实现的接口。
+		对于每个类而言：JRE都为其保留一个不变的Class类型的对象，Class对象包含了特定某个类的相关信息。
+		
+		注：(1)Class对象只能由系统建立对象
+			(2)一个类在JVM中只会有一个Class实例
+			(3)每个类的实例都由对应Class实例所生成
+			
+	1.1 Class：Class是一个类
+	  小写class表示一个类类型，大写Class表示这个类的类名
+	  
+	public class ReflectionTest {
+		@Test
+		public void testClass(){
+			 Class clazz = null;
+	    }
+	}
+		
+	final class Class<T> implements java.lang.reflect.AnnotatedArrayType,java.io.Serializable{
+	..............
+	..............
+	..............
+
+    }
+		
+	1.2 类中封装信息
+	   例：定义一个Person类：类中有属性、构造器、方法	   
+	   
+	public class Person {
+    
+    
+    private String name;
+    private int age;
+    private String address;
+
+    
+    //带参构造器
+    public Person(String name, int age, String address) {
+        this.name = name;
+        this.age = age;
+        this.address = address;
+    }
+
+    //不带参构造器
+    public Person() {
+        super();
+    }
+
+    /**
+     * set和get方法
+     */
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    @Override
+    public String toString() {
+        return "Person{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", address='" + address + '\'' +
+                '}';
+    }
+}
+
+	通过Class类获取类对象：
+	public void testClass(){
+    Class clazz = null;
+    //1.获得Class对象
+    clazz = Person.class;
+	//2.返回字段数组
+    Field[] fields = clazz.getDeclaredFields();
+    System.out.println();
+    }
+	
+	1.3对象为什么需要照镜子？
+	   1. 对象可能由别人传入
+	   2. 可能没有对象，只有一个全类名
+	
+    1.4 获取Class对象的三种方式：
+       (1) 通过类名获取      ：类名.class
+	   (2) 通过对象获取      ：对象名.getClass()
+	   (3) 通过全类名获取    : Class.forName(全类名)
+	   
+	    //1.通过类名获取Class对象
+        clazz = Person.class;
+        
+        //2.通过对象名
+        /*传入一个对象且不知对象类型时使用*/
+        Object obj = new Person();
+        clazz = obj.getClass();
+        
+        //3.通过全类名获取Class对象(会抛出异常)
+        String className ="com.zysz.reflect.Person";
+        clazz = Class.forName(className);
+		
+	1.5 通过反射构建对象 (Class类的newInstance方法)
+	   public Object getInstance() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+
+        //1.获取Class对象
+        String className = "com.zysz.reflect.Person";
+        //2.利用Class对象的newInstance方法创建一个类的实例
+        Object obj = Class.forName(className).newInstance();
+
+        return obj;
+    }
+	    上例代码通过Class.forName方法给类加载器注册了已发个类Person的全限定名然后通过newInstance方法初始化了一个类对象，Person类有带参构造方法和不带参构造方法，实际调用的是类的无参数构造。
+		我们在定义一个类的时候，定义一个有参数的构造器，作用是对属性进行初始化，还要写一个我无参数的构造器，作用是反射的时候调用
+		
+	2.ClassLoader：类加载器
+	  类加载器用于把类(class)装载进JVM。JVM规范定义了两种类型的类装载器：启动类(bootstrap)和用户自定义装载器(user-defined ClassLoader)
+	   @Test
+    public void testClassLoader() throws ClassNotFoundException {
+        //1.获取一个系统的类加载器(可以获取，当前类ReflectionTest就是系统的类加载器加载)
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        System.out.println(classLoader);
+
+        //2.获取系统类加载器的父类加载器(扩展类加载器，可以获取)
+        classLoader = classLoader.getParent();
+        System.out.println(classLoader);
+
+        //3.获取扩展类的父类加载器(引导类加载器，不可获取)
+        classLoader = classLoader.getParent();
+        System.out.println(classLoader);
+
+        //4.测试当前类由哪一个加载器进行加载(系统类加载器)
+        //4.1 获取当前类的Class对象
+        Class clazz = Class.forName("com.zysz.junit.ReflectionTest");
+        //4.2 获取类加载器
+        classLoader = clazz.getClassLoader();
+        System.out.println(classLoader);
+
+        //5.测试JDK提供的Object类由哪一个加载器加载(引导类)
+        classLoader = Class.forName("java.lang.Object").getClassLoader();
+        System.out.println(classLoader);
+    }
+	    
+		sun.misc.Launcher$AppClassLoader@18b4aac2
+		sun.misc.Launcher$ExtClassLoader@a09ee92
+		null
+		sun.misc.Launcher$AppClassLoader@18b4aac2
+		null
+		
+	
+	
+	3.反射：
+	  Java中的反射机制允许程序在执行期间借助API获取任何类的内部信息并直接操作任意对象的内部属性及方法。
+	  java反射机制提供如下功能：
+	  (1)在运行时构造任意一个类的对象
+	  (2)在运行时获取任一个类的成员变量和方法
+	  (3)在运行时调用人一个对象的方法
+	  (4)生成动态代理
+	  
+	  Class是一个描述类的类，封装了：
+	                                (1)Method(方法)
+									(2)Field (字段)
+    								(3)Constructor(构造方法)
+	  
+	  3.1 反射方法Method
+	  
+	    3.1.1 获取所有方法
+        /*
+        * 3.1 获取clazz对应的所有方法--方法数组(-)
+        * 不能获取private方法
+        * */
+        Method[] methods = clazz.getMethods();
+        for (Method method:methods){
+            System.out.print("  "+method.getName());
+        }
+		
+		3.1.2 获取所有方法：包含私有方法
+		/*
+         * 3.2 获取所有方法，包括私有方法： 方法数组(二)
+         * 所有声明的方法都能获取，且只获取当前类的方法
+         * */
+        methods = clazz.getDeclaredMethods();
+        for (Method method :methods){
+            System.out.print("  "+method.getName());
+        }
+		
+		3.1.3 获取指定方法
+		/*
+        * 3.3 获取指定的方法
+        * 需要写参数名称和参数列表，无参则不需要书写
+        * 例：public void setName(String name){}
+        * */
+        Method method = clazz.getDeclaredMethod("setName", String.class);
+        System.out.println(method);
+        /*
+        * 对于方法public void setAge(int age)
+        * 参数列表写成Integer是获取不到的，
+        * 如果方法用于反射，那么要么int类型写成Integer：public void setAge(Integer age){}
+        * 要么获取参数的方法写成int.class
+        * */
+        //method = clazz.getDeclaredMethod("setAge", Integer.class);
+        method =clazz.getDeclaredMethod("setAge", int.class);
+        System.out.println(method);
+		
+		3.1.4 执行方法
+		 Object obj = clazz.newInstance();
+        //invoke的第一个参数表示执行哪个对象的方法，剩下的参数是执行方法时需要传入的参数
+        method =obj.getClass().getDeclaredMethod("setName", String.class);
+        method.invoke(obj,"张三");
+        System.out.println(obj.getClass().getDeclaredMethod("getName").invoke(obj));
+		
+		注：如果一个方法是私有方法，可以获取到私有方法，但无法执行该方法。
+		    私有方法的执行，必须在调用invoke之前加上一句 method.setAccessible(true)
+			
+		//执行私有方法代码
+	    Object object= clazz.newInstance();
+        Method md =object.getClass().getDeclaredMethod("sayHello");
+        //执行私有方法前需要加上method.setAccessible(true)
+        md.setAccessible(true);
+        md.invoke(obj);
+		
+		
+		3.1.5 自定义工具方法
+		      自定义一个方法：
+			     把类对象和类方法名作为参数，执行方法
+				 把全类名和方法名作为参数，执行方法
+				 
+		(1)把类对象和方法名作为参数，执行方法		 
+		自定义工具方法：invoke		 
+	public Object invoke(Object object,String methodName,Object...args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        //1.获取method对象
+        //因为getMethod的参数为Class列表类型，所以需要把参数args转化为Class类型
+        Class[] parameterType = new Class[args.length];
+        for (int i=0;i<args.length;i++){
+            parameterType[i]=args[i].getClass();
+            System.out.println(parameterType[i]);
+        }
+
+        //如果使用getDeclaredMethod，就不能获取父类方法，如果使用getMethod，就不能获取私有方法
+        Method method = object.getClass().getDeclaredMethod(methodName,parameterType);
+
+        //执行Method方法，并返回方法的返回值
+        return method.invoke(object,args);
+    }
+	    
+		
+		 @Test
+	public void testInvoke() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        Object object = new Person();
+        invoke(object,"test","wang",1);
+    }
+	    (2)把全类名和方法名作为参数，执行方法
+		   定义工具方法：
+		   public Object invoke(String className,String methodName,Object...args) {
+        Object object = null;
+        try {
+            object = Class.forName(className).newInstance();
+            //调用上一个方法
+            return invoke(object, methodName, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+	
+	执行方法：
+	    @Test
+    public void testInvoke(){
+        invoke("com.zysz.reflect.Person","test","tao",1);
+
+    }
+	
+	使用系统方法(前提是有一个无参的构造器)
+    @Test
+    public void testInvoke(){
+        Object result = invoke("java.text.SimpleDateFormat","format",new Date());
+    }
+	
+	这种反射实现的主要优势为：可配置和低耦合，只需类名和方法名，而不需要一个类对象就可以执行一个方法。
+	如果将全类名和方法名放在一个配置文件中就可以根据配置文件来执行方法
+	
+
+	3.1.6 获取父类定义的私有方法：
+	       getDeclaredMethod可以获取私有方法，但不能获取父类方法。使用getMethod可以获取父类方法，但是不能获取私有方法。
+		   如何获取父类方法：首先需要知道如何获取类的父亲
+		   @Test
+    public void testGetSuperClass() throws ClassNotFoundException {
+        //1.获取Class对象
+        String className ="com.zysz.reflect.Student";
+        Class clazz = Class.forName(className);
+        //获取父类对象
+        Class superClass = clazz.getSuperclass();
+
+        System.out.println(superClass);                 #######class com.zysz.reflect.Person
+
+    }
+	
+	此时如果Student中有一个私有方法method1；Person中有一个私有方法method2(),如何调用？
+	所以我们需要定义一个方法，不但能访问当前类的私有方法，还要能访问父类的私有方法
+	
+	  //定义一个方法，既能访问当前类的私有方法也能访问父类的私有方法
+    public Object invoke2(Object object,String methodName,Object...args){
+        //1.获取Method对象
+        Class[] parameterType = new Class[args.length];
+        for (int i=0;i<args.length;i++){
+            parameterType[i]=args[i].getClass();
+        }
+
+        try {
+            //获取方法
+            Method method = getMethod(object.getClass(), methodName, parameterType);
+            method.setAccessible(true);
+
+            //执行method方法
+            return method.invoke(object, args);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Method getMethod(Class clazz,String methodName,Class...parameterType){
+
+        /*
+        * 获取clazz的methodName方法，该方法可能是私有方法，还可能在父类中
+        * */
+        for (;clazz!=Object.class;clazz = clazz.getSuperclass()){
+            try {
+                Method method = clazz.getDeclaredMethod(methodName,parameterType);
+                return method;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+	
+	
+	3.2 反射字段Field 
+	  
+			* 1.获取字段
+        * 1.1获取所有的字段--字段数组
+        * */
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field feild :fields){
+                System.out.print(feild);
+            }
+            System.out.println();
+        /*
+         *1.2 获取指定字段
+         * */
+        Field field = clazz.getDeclaredField("name");
+        System.out.println(field.getName());
+		
+		//2.使用字段
+        //2.1执行私有字段
+        field = clazz.getDeclaredField("age");
+        field.setAccessible(true);
+        System.out.println(field.get(person));
+		
+	3.3 反射构造器constructor
+		//1.获取Constructor对象
+        Constructor<Person>[] constructors = (Constructor<Person>[]) clazz.getConstructors();
+        for (Constructor<Person> constructor :constructors){
+            System.out.println(constructor);
+        }
+        //1.2 获取某一个，需要参数列表
+        Constructor<Person> constructor = clazz.getConstructor(String.class,int.class);
+        System.out.println(constructor);
+
+        //1.3 调用构造器的newInstance()方法创建对象
+        Object object = constructor.newInstance("zhang",1);
